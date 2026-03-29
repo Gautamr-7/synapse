@@ -110,7 +110,7 @@ export default function MemoryGraph({ sessionId }: { sessionId: string }) {
 
     const g = svg.append("g");
 
-    svg.call(
+    (svg as any).call(
       d3.zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.3, 2.5])
         .on("zoom", (e) => g.attr("transform", e.transform))
@@ -163,17 +163,18 @@ export default function MemoryGraph({ sessionId }: { sessionId: string }) {
       .attr("stroke-width", 1)
       .attr("marker-end", "url(#arrow)");
 
-    const node = g.append("g").selectAll("g")
+    const node = g.append("g").selectAll<SVGGElement, GraphNode>("g")
       .data(nodes).join("g")
       .attr("cursor", "pointer")
-      .call(
-        d3.drag<SVGGElement, GraphNode>()
-          .on("start", (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
-          .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
-          .on("end", (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; })
-      )
       .on("click", (_, d) => setSelected(d));
 
+    (node as any).call(
+      d3.drag<SVGGElement, GraphNode>()
+        .on("start", (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+        .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+        .on("end", (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; })
+    );
+    
     node.append("circle")
       .attr("r", d => radius(d))
       .attr("fill", d => color(d))
