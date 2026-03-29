@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 const MemoryGraph = dynamic(() => import("./MemoryGraph"), { ssr: false });
 const ActionReplay = dynamic(() => import("./ActionReplay"), { ssr: false });
 
-const SYNAPSE_BASE = "http://localhost:8000";
+const SYNAPSE_BASE = "https://synapse-backend-b5k1.onrender.com";
 
 type Step = { step_name: string; status: string; metadata: string | null; };
 type Memory = { key: string; value: string; memory_type: string; };

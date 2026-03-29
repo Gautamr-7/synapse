@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
-const SYNAPSE_BASE = "http://localhost:8000";
+const SYNAPSE_BASE = "https://synapse-backend-b5k1.onrender.com";
 
 type GraphNode = {
   id: string;
@@ -174,7 +174,7 @@ export default function MemoryGraph({ sessionId }: { sessionId: string }) {
         .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
         .on("end", (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; })
     );
-    
+
     node.append("circle")
       .attr("r", d => radius(d))
       .attr("fill", d => color(d))

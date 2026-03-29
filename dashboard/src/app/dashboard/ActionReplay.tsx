@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const SYNAPSE_BASE = "http://localhost:8000";
+const SYNAPSE_BASE = "https://synapse-backend-b5k1.onrender.com";
 
 type VisualEntry = {
   id: number;
