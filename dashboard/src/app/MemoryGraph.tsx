@@ -97,10 +97,10 @@ export default function MemoryGraph({ sessionId }: { sessionId: string }) {
 
     const g = svg.append("g");
 
-    svg.call(
+    (svg as any).call(
       d3.zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.3, 2.5])
-        .on("zoom", (e) => g.attr("transform", e.transform)) as any
+        .on("zoom", (e) => g.attr("transform", e.transform))
     );
 
     const color = (n: GraphNode) => {
