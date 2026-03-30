@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="synapse-sdk",
+    name="synapseai-sdk",
     version="0.1.0",
     description="Persistent memory OS for AI agents",
     long_description=open("README.md").read(),

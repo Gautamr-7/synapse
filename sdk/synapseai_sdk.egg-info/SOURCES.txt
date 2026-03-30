@@ -1,0 +1,8 @@
+README.md
+setup.py
+synapse.py
+synapseai_sdk.egg-info/PKG-INFO
+synapseai_sdk.egg-info/SOURCES.txt
+synapseai_sdk.egg-info/dependency_links.txt
+synapseai_sdk.egg-info/requires.txt
+synapseai_sdk.egg-info/top_level.txt

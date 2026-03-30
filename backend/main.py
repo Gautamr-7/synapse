@@ -39,7 +39,7 @@ class ApiKeyCreateRequest(BaseModel):
     name: str
 
 def verify_api_key(x_api_key: Optional[str] = Header(None)):
-    if x_api_key is None or x_api_key == "demo":
+    if x_api_key is None:
         return "demo"
     key_data = database.get_api_key(x_api_key)
     if not key_data:
@@ -215,4 +215,97 @@ def get_key_stats(api_key: str):
         "total_calls": key_data["usage_count"],
         "created_at": key_data["created_at"],
         "status": "active"
+    }
+
+# ─── Visual Execution Memory ──────────────────────────────────────────────────
+
+import visual_memory as vm
+vm.init_visual_table()
+
+class VisualStepRequest(BaseModel):
+    session_id: str
+    step_name: str
+    action_taken: str
+    outcome: str
+
+@app.post("/visual/capture")
+def capture_visual_step(req: VisualStepRequest):
+    """
+    Capture a screenshot RIGHT NOW and store it with this step.
+    Call this when an agent step completes.
+    """
+    vm.save_visual_step(
+        req.session_id,
+        req.step_name,
+        req.action_taken,
+        req.outcome
+    )
+    return {
+        "status": "captured",
+        "session_id": req.session_id,
+        "step_name": req.step_name,
+        "timestamp": datetime.utcnow().isoformat(),
+        "message": "Screenshot captured and stored in Synapse visual memory"
+    }
+
+@app.get("/visual/history/{session_id}")
+def get_visual_history(session_id: str):
+    """Get all visual memory entries for a session (no screenshots — just metadata)."""
+    history = vm.get_visual_history(session_id)
+    return {
+        "session_id": session_id,
+        "total_captures": len(history),
+        "history": history
+    }
+
+@app.get("/visual/step/{session_id}/{step_name}")
+def get_visual_step(session_id: str, step_name: str):
+    """Get the latest screenshot + metadata for a specific step."""
+    entry = vm.get_visual_step(session_id, step_name)
+    if not entry:
+        raise HTTPException(status_code=404, detail=f"No visual memory found for step: {step_name}")
+    return entry
+
+@app.get("/visual/replay/{entry_id}")
+def get_visual_by_id(entry_id: int):
+    """Get a specific visual memory entry by ID — full screenshot included."""
+    entry = vm.get_visual_step_by_id(entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Visual memory entry not found")
+    return entry
+
+# ─── Developer Signup ──────────────────────────────────────────────────────────
+
+import signup as signup_module
+
+class SignupRequest(BaseModel):
+    name: str
+    email: str
+    project: str
+
+@app.post("/signup")
+def developer_signup(req: SignupRequest):
+    """
+    Developer signup — generates API key and sends it via email.
+    This is the public endpoint for the signup page.
+    """
+    # Generate unique API key
+    api_key = f"syn-{secrets.token_urlsafe(32)}"
+
+    # Save to database
+    database.create_api_key(api_key, req.project, req.email)
+
+    # Send welcome email
+    email_sent = signup_module.send_api_key_email(req.email, req.name, api_key)
+
+    return {
+        "status": "success",
+        "message": f"API key sent to {req.email}",
+        "api_key": api_key,
+        "email_sent": email_sent,
+        "next_steps": {
+            "install": "pip install synapseai-sdk",
+            "docs": "https://synapse-backend-b5k1.onrender.com/docs",
+            "dashboard": "https://synapse-aii.netlify.app/dashboard"
+        }
     }

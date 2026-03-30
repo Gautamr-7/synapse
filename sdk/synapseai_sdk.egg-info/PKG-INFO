@@ -1,0 +1,92 @@
+Metadata-Version: 2.4
+Name: synapseai-sdk
+Version: 0.1.0
+Summary: Persistent memory OS for AI agents
+Home-page: https://synapse-aii.netlify.app
+Author: Synapse AI
+Keywords: ai agents memory llm langchain crewai autogen
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: requests>=2.31.0
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Synapse SDK
+
+Persistent memory OS for AI agents.
+
+## Install
+
+```bash
+pip install synapse-sdk
+```
+
+## Quickstart
+
+```python
+from synapse import Synapse
+
+syn = Synapse(api_key="syn-your-key")
+
+# Create a session for your agent
+session = syn.create_session("Extract invoices from Gmail and upload to Sheets")
+
+# Save memory after each step
+syn.update_step(session, "fetch_emails", "completed", "Fetched 50 emails")
+syn.save(session, "emails_fetched", "50")
+
+# Get compressed context for your LLM
+context = syn.context(session)
+# â†’ [SYNAPSE MEMORY CONTEXT]
+#   Goal: Extract invoices...
+#   Completed: fetch_emails
+#   Next step: parse_invoices
+
+# After any restart â€” resume exactly where you stopped
+result = syn.resume(session)
+print(result["resume_from"])  # â†’ {"step_name": "parse_invoices", ...}
+```
+
+## Use with any agent framework
+
+```python
+# LangChain
+from synapse import Synapse
+syn = Synapse(api_key="syn-your-key")
+session = syn.create_session(task)
+
+# inject context into every LLM call
+context = syn.context(session)
+response = llm.invoke(context + your_prompt)
+
+# CrewAI, AutoGen, custom â€” same pattern
+```
+
+## API Reference
+
+| Method | Description |
+|--------|-------------|
+| `syn.create_session(task)` | Create new agent session |
+| `syn.save(session, key, value)` | Save memory |
+| `syn.update_step(session, step, status)` | Track workflow step |
+| `syn.resume(session)` | Resume after restart |
+| `syn.context(session)` | Get compressed LLM context |
+| `syn.get_memory(session)` | Get all session memory |
+| `syn.run_step(session, step, fn)` | Auto-tracked step execution |
+
+## Links
+
+- Dashboard: https://synapse-aii.netlify.app
+- API Docs: https://synapse-backend-b5k1.onrender.com/docs
