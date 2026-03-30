@@ -20,7 +20,7 @@ import requests
 from groq import Groq
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-SYNAPSE_BASE  = "http://localhost:8000"
+SYNAPSE_BASE = "https://synapse-backend-b5k1.onrender.com"
 MODEL         = "llama-3.1-8b-instant"
 
 client = Groq(api_key=GROQ_API_KEY)

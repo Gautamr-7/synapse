@@ -39,7 +39,7 @@ class ApiKeyCreateRequest(BaseModel):
     name: str
 
 def verify_api_key(x_api_key: Optional[str] = Header(None)):
-    if x_api_key is None:
+    if x_api_key is None or x_api_key == "demo":
         return "demo"
     key_data = database.get_api_key(x_api_key)
     if not key_data:
