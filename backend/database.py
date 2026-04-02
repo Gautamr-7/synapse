@@ -359,3 +359,26 @@ def get_api_key_stats(api_key):
         "sessions": session_count["count"] if session_count else 0,
         "total_memories": memory_count["count"] if memory_count else 0,
     }
+
+def get_step_patterns(step_name: str, limit: int = 10) -> list:
+    """Get historical outcomes for a step across all sessions."""
+    if USE_POSTGRES:
+        return pg_execute("""
+            SELECT step_name, status, metadata, updated_at::text
+            FROM workflow_steps
+            WHERE step_name=:step AND status='completed'
+            ORDER BY updated_at DESC LIMIT :limit
+        """, {"step": step_name, "limit": limit}, fetch="all") or []
+    else:
+        conn = get_sqlite_conn()
+        rows = conn.execute(
+            "SELECT step_name, status, metadata, updated_at FROM workflow_steps WHERE step_name=? AND status='completed' ORDER BY updated_at DESC LIMIT ?",
+            (step_name, limit)
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+def get_session_step_sequence(session_id: str) -> list:
+    """Get the order of completed steps for a session — used for pattern learning."""
+    steps = get_workflow_steps(session_id)
+    return [s["step_name"] for s in steps if s["status"] == "completed"]

@@ -309,3 +309,51 @@ def developer_signup(req: SignupRequest):
             "dashboard": "https://synapse-aii.netlify.app/dashboard"
         }
     }
+
+@app.get("/memory/predict/{session_id}")
+def predict_next_steps(session_id: str):
+    """
+    PREDICTIVE MEMORY — nobody else has this.
+    Looks at what steps are pending, checks historical
+    patterns across all past runs, and predicts what
+    comes next + pre-loads context for it.
+    """
+    steps = database.get_workflow_steps(session_id)
+    completed = [s["step_name"] for s in steps if s["status"] == "completed"]
+    pending = [s["step_name"] for s in steps if s["status"] == "pending"]
+
+    if not pending:
+        return {"status": "workflow_complete", "predictions": []}
+
+    next_step = pending[0]
+
+    # Look at historical outcomes for this step
+    patterns = database.get_step_patterns(next_step)
+    outcomes = [p["metadata"] for p in patterns if p["metadata"]]
+
+    # Find most common outcome
+    most_common = max(set(outcomes), key=outcomes.count) if outcomes else None
+
+    # Pre-build context for the predicted step
+    memories = database.get_memories(session_id)
+    goal = next((m["value"] for m in memories if m["key"] == "goal"), "Unknown")
+
+    predicted_context = f"""[SYNAPSE PREDICTIVE CONTEXT]
+Goal: {goal}
+Completed: {', '.join(completed) if completed else 'None'}
+Predicted next: {next_step}
+Historical pattern: Seen {len(patterns)} times
+Most likely outcome: {most_common or 'No history yet'}
+Pre-loaded for: {next_step}
+"""
+
+    return {
+        "status": "predicted",
+        "next_step": next_step,
+        "confidence": min(len(patterns) * 10, 95),
+        "historical_runs": len(patterns),
+        "predicted_outcome": most_common,
+        "predicted_context": predicted_context,
+        "all_pending": pending,
+        "message": f"Synapse predicted: {next_step} — pre-loaded context ready"
+    }
