@@ -182,6 +182,49 @@ Memory entries: {len(memories)}
         "raw_memory_count": len(memories),
         "workflow_steps": len(steps)
     }
+  
+@app.get("/compare/{session_id}")
+def compare_tokens(session_id: str, x_api_key: Optional[str] = Header(None)):
+    verify_api_key(x_api_key)
+    memories = database.get_memories(session_id)
+    steps = database.get_workflow_steps(session_id)
+
+    if not memories and not steps:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # 1. Traditional Memory (Agent sends all raw history every time)
+    raw_history = str(memories) + str(steps)
+    # Rough LLM token approximation: 1 token ≈ 4 characters
+    buffer_tokens = max(int(len(raw_history) / 4), 10) 
+
+    # 2. Synapse Compressed Context
+    goal = next((m["value"] for m in memories if m["key"] == "goal"), "Unknown")
+    completed_steps = [s["step_name"] for s in steps if s["status"] == "completed"]
+    pending_steps = [s["step_name"] for s in steps if s["status"] == "pending"]
+    
+    compressed = f"""[SYNAPSE MEMORY CONTEXT]
+Goal: {goal}
+Completed: {', '.join(completed_steps) if completed_steps else 'None'}
+Next step: {pending_steps[0] if pending_steps else 'All done'}
+"""
+    synapse_tokens = max(int(len(compressed) / 4), 10)
+
+    # 3. Calculate Savings
+    savings_pct = 0
+    if buffer_tokens > 0:
+        savings_pct = round(((buffer_tokens - synapse_tokens) / buffer_tokens) * 100, 1)
+
+    # Assume $0.15 per 1M input tokens (Standard open-source rate)
+    savings_dollars = ((buffer_tokens - synapse_tokens) / 1_000_000) * 0.15
+
+    return {
+        "session_id": session_id,
+        "buffer_tokens": buffer_tokens,
+        "synapse_tokens": synapse_tokens,
+        "tokens_saved": buffer_tokens - synapse_tokens,
+        "savings_pct": savings_pct,
+        "cost_savings_usd": f"${savings_dollars:.6f}"
+    }
 
 @app.get("/agents/active")
 def get_active_agents():
