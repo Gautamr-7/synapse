@@ -17,7 +17,7 @@ import requests
 import time
 import sys
 
-BASE = "http://localhost:8000"
+BASE = "https://synapse-backend-b5k1.onrender.com"
 SESSION = "demo-foundry-001"
 
 def run_workflow():
