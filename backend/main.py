@@ -219,8 +219,8 @@ def get_key_stats(api_key: str):
 
 # ─── Visual Execution Memory ──────────────────────────────────────────────────
 
-import visual_memory as vm
-vm.init_visual_table()
+#import visual_memory as vm
+#vm.init_visual_table()
 
 class VisualStepRequest(BaseModel):
     session_id: str
