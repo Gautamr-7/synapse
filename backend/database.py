@@ -199,7 +199,7 @@ def get_all_sessions():
                 MAX(CASE WHEN m.key='goal' THEN m.value END) OVER (PARTITION BY m.session_id) as goal,
                 MAX(CASE WHEN m.key='agent_name' THEN m.value END) OVER (PARTITION BY m.session_id) as agent_name,
                 COUNT(m.id) OVER (PARTITION BY m.session_id) as memory_count,
-                MAX(m.updated_at)::text OVER (PARTITION BY m.session_id) as last_active
+                CAST(MAX(m.updated_at) OVER (PARTITION BY m.session_id) AS TEXT) as last_active
             FROM memories m
             ORDER BY m.session_id, m.updated_at DESC
             LIMIT 20
