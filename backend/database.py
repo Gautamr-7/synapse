@@ -219,22 +219,46 @@ def get_all_sessions():
 
 # ─── Workflow ──────────────────────────────────────────────────────────────────
 def save_visual_step(session_id, data):
-    query = """
-    INSERT INTO visual_steps (session_id, step_name, action_taken, outcome, image_data)
-    VALUES (%s, %s, %s, %s, %s)
-    """
-    values = (
-        session_id,
-        data.get('step_name', 'Unknown Step'),
-        data.get('action_taken', ''),
-        data.get('outcome', ''),
-        data.get('image_data', '')
-    )
-    execute_query(query, values)
+    step_name = data.get('step_name', 'Unknown Step')
+    action_taken = data.get('action_taken', '')
+    outcome = data.get('outcome', '')
+    image_data = data.get('image_data', '')
+
+    if USE_POSTGRES:
+        pg_execute("""
+            INSERT INTO visual_steps (session_id, step_name, action_taken, outcome, image_data)
+            VALUES (:sid, :step, :action, :outcome, :image)
+        """, {
+            "sid": session_id, 
+            "step": step_name, 
+            "action": action_taken, 
+            "outcome": outcome, 
+            "image": image_data
+        })
+    else:
+        conn = get_sqlite_conn()
+        conn.execute("""
+            INSERT INTO visual_steps (session_id, step_name, action_taken, outcome, image_data)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session_id, step_name, action_taken, outcome, image_data))
+        conn.commit()
+        conn.close()
 
 def get_visual_steps(session_id):
-    query = "SELECT * FROM visual_steps WHERE session_id = %s ORDER BY id ASC"
-    return fetch_all(query, (session_id,))
+    if USE_POSTGRES:
+        return pg_execute(
+            "SELECT * FROM visual_steps WHERE session_id = :sid ORDER BY id ASC",
+            {"sid": session_id}, 
+            fetch="all"
+        ) or []
+    else:
+        conn = get_sqlite_conn()
+        rows = conn.execute(
+            "SELECT * FROM visual_steps WHERE session_id = ? ORDER BY id ASC", 
+            (session_id,)
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
 
 def update_workflow_step(session_id, step_name, status, metadata=None, api_key="demo"):
     if USE_POSTGRES:
