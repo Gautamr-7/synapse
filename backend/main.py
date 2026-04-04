@@ -403,12 +403,12 @@ Pre-loaded for: {next_step}
 
 @app.post("/visual/capture/{session_id}")
 async def capture_visual(session_id: str, data: dict):
-    # data will have 'step' and 'image' (base-64 string)
-    database.save_screenshot(session_id, data['step'], data['image'])
-    return {"status": "success"}
+    # Pass the whole dictionary to the database
+    database.save_visual_step(session_id, data)
+    return {"status": "saved"}
 
 @app.get("/visual/steps/{session_id}")
-async def get_visual_steps(session_id: str):
-    # Fetch all screenshots for this session
-    steps = database.get_visual_steps(session_id) 
+async def fetch_visual_steps(session_id: str):
+    # Fetch and return the list
+    steps = database.get_visual_steps(session_id)
     return {"steps": steps}

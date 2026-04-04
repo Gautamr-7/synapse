@@ -218,13 +218,24 @@ def get_all_sessions():
         return [dict(r) for r in rows]
 
 # ─── Workflow ──────────────────────────────────────────────────────────────────
-def save_screenshot(session_id, step_name, image_b64):
+def save_visual_step(session_id, data):
     query = """
-    INSERT INTO visual_steps (session_id, step_name, image_data, timestamp)
-    VALUES (%s, %s, %s, NOW())
+    INSERT INTO visual_steps (session_id, step_name, action_taken, outcome, image_data)
+    VALUES (%s, %s, %s, %s, %s)
     """
-    execute_query(query, (session_id, step_name, image_b64))
-    
+    values = (
+        session_id,
+        data.get('step_name', 'Unknown Step'),
+        data.get('action_taken', ''),
+        data.get('outcome', ''),
+        data.get('image_data', '')
+    )
+    execute_query(query, values)
+
+def get_visual_steps(session_id):
+    query = "SELECT * FROM visual_steps WHERE session_id = %s ORDER BY id ASC"
+    return fetch_all(query, (session_id,))
+
 def update_workflow_step(session_id, step_name, status, metadata=None, api_key="demo"):
     if USE_POSTGRES:
         pg_execute("""
