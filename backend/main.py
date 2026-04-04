@@ -400,3 +400,15 @@ Pre-loaded for: {next_step}
         "all_pending": pending,
         "message": f"Synapse predicted: {next_step} — pre-loaded context ready"
     }
+
+@app.post("/visual/capture/{session_id}")
+async def capture_visual(session_id: str, data: dict):
+    # data will have 'step' and 'image' (base-64 string)
+    database.save_screenshot(session_id, data['step'], data['image'])
+    return {"status": "success"}
+
+@app.get("/visual/steps/{session_id}")
+async def get_visual_steps(session_id: str):
+    # Fetch all screenshots for this session
+    steps = database.get_visual_steps(session_id) 
+    return {"steps": steps}

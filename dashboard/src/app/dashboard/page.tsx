@@ -13,7 +13,7 @@ type Step = { step_name: string; status: string; metadata: string | null; };
 type Memory = { key: string; value: string; memory_type: string; };
 type Session = { session_id: string; goal: string; agent_name: string; memory_count: number; last_active: string; };
 type Agent = { session_id: string; name: string; agent_type: string; task: string; total_steps: number; completed_steps: number; progress_pct: number; };
-type Tab = "playground" | "sessions" | "graph" | "replay" | "api";
+type Tab = "playground" | "sessions" | "graph" | "replay" | "api" | "compare";
 
 export default function Dashboard() {
   const [tab, setTab] = useState<Tab>("playground");
@@ -30,6 +30,8 @@ export default function Dashboard() {
   const [apiKeyName, setApiKeyName] = useState("");
   const [generatedKey, setGeneratedKey] = useState("");
   const [copied, setCopied] = useState(false);
+  const [compareData, setCompareData] = useState<any>(null);
+  const [predictions, setPredictions] = useState<string[]>([]);
 
   const fetchSession = async (sid: string) => {
     try {
@@ -40,10 +42,29 @@ export default function Dashboard() {
       ]);
       const [w, m, c] = await Promise.all([wRes.json(), mRes.json(), cRes.json()]);
       setWorkflow(w); setMemory(m); setContext(c);
+
+      // --- STEP 3: TOKEN COMPARISON FETCH ---
+      try {
+        const compRes = await fetch(`${SYNAPSE_BASE}/compare/${sid}`);
+        if (compRes.ok) setCompareData(await compRes.json());
+      } catch (e) { 
+        console.error("Compare fetch error", e); 
+      }
+      // --------------------------------------
+
       setConnected(true);
       setLastUpdated(new Date().toLocaleTimeString());
       setPulse(true); setTimeout(() => setPulse(false), 400);
-    } catch { setConnected(false); }
+      
+      const pRes = await fetch(`${SYNAPSE_BASE}/memory/predict/${sid}`);
+      if (pRes.ok) {
+        const pData = await pRes.json();
+        setPredictions(pData.predicted_keys || []);
+      }
+
+    } catch { 
+      setConnected(false); 
+    }
   };
 
   const fetchAll = async () => {
@@ -100,6 +121,7 @@ export default function Dashboard() {
     { id: "graph", label: "Memory Graph" },
     { id: "replay", label: "Action Replay" },
     { id: "api", label: "API Keys" },
+    { id: "compare", label: "Token Metrics" },
   ];
 
   return (
@@ -240,16 +262,33 @@ export default function Dashboard() {
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>{memory?.memory_count ?? 0} entries</div>
                 </div>
                 <div style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                  {memory?.memories?.length ? memory.memories.map((m: Memory) => (
-                    <div key={m.key} style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "10px 12px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 11, color: "#fb923c", fontFamily: "DM Mono" }}>{m.key}</span>
-                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.15)" }}>{m.memory_type}</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.value}</div>
-                    </div>
-                  )) : <div style={{ fontSize: 12, color: "rgba(255,255,255,0.15)", textAlign: "center", padding: "16px 0" }}>No memory yet</div>}
-                </div>
+  {memory?.memories?.length ? memory.memories.map((m: Memory) => (
+    <div key={m.key} style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "10px 12px", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 11, color: "#fb923c", fontFamily: "DM Mono" }}>{m.key}</span>
+          
+          {/* THE PREDICTION BADGE */}
+          {predictions.includes(m.key) && (
+            <span style={{ 
+              fontSize: 8, 
+              padding: "1px 5px", 
+              background: "rgba(74,222,128,0.1)", 
+              color: "#4ade80", 
+              border: "1px solid rgba(74,222,128,0.2)", 
+              borderRadius: 4,
+              fontWeight: "bold" 
+            }}>
+              PREDICTED
+            </span>
+          )}
+        </div>
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.15)" }}>{m.memory_type}</span>
+      </div>
+      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.value}</div>
+    </div>
+  )) : <div style={{ fontSize: 12, color: "rgba(255,255,255,0.15)", textAlign: "center", padding: "16px 0" }}>No memory yet</div>}
+</div>
               </div>
             </div>
           </div>
@@ -335,8 +374,24 @@ export default function Dashboard() {
       )}
 
       {/* ── REPLAY ── */}
+      {/* ── REPLAY ── */}
       {tab === "replay" && (
-        <div style={{ height: "calc(100vh - 56px)" }}>
+        <div style={{ 
+          height: "calc(100vh - 56px)", 
+          padding: "24px 32px", 
+          overflowY: "auto",
+          background: "#050508" 
+        }}>
+          <div style={{ marginBottom: 20 }}>
+            <h2 style={{ fontSize: 18, fontFamily: "'Bebas Neue'", letterSpacing: "0.05em", color: "#fff" }}>
+              Visual Action Replay
+            </h2>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+              Step-by-step browser interactions captured and optimized by Synapse.
+            </p>
+          </div>
+          
+          {/* This is your dynamic component */}
           <ActionReplay sessionId={sessionId} />
         </div>
       )}
@@ -397,6 +452,71 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+    
+
+      {/* ── TOKEN METRICS (COMPARE) ── */}
+      {tab === "compare" && (
+        <div style={{ padding: "24px 32px", maxWidth: 800 }}>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>Efficiency & Cost Savings</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", marginBottom: 24 }}>See how much API cost Synapse saves by compressing context instead of sending raw history.</div>
+
+          {!compareData ? (
+            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Loading token metrics... (Make sure a session is loaded in the Playground)</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              
+              {/* BIG NUMBERS GRID */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                <div style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 16, padding: "20px" }}>
+                  <div style={{ fontSize: 11, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Without Synapse</div>
+                  <div style={{ fontSize: 36, color: "#fff", fontFamily: "'Bebas Neue'" }}>{compareData.buffer_tokens.toLocaleString()} <span style={{fontSize: 14, color:"rgba(255,255,255,0.3)", fontFamily: "'DM Sans'"}}>tokens</span></div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Standard raw history buffer</div>
+                </div>
+                
+                <div style={{ background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 16, padding: "20px" }}>
+                  <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>With Synapse</div>
+                  <div style={{ fontSize: 36, color: "#fff", fontFamily: "'Bebas Neue'" }}>{compareData.synapse_tokens.toLocaleString()} <span style={{fontSize: 14, color:"rgba(255,255,255,0.3)", fontFamily: "'DM Sans'"}}>tokens</span></div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Compressed logical context</div>
+                </div>
+
+                <div style={{ background: "rgba(232,93,4,0.05)", border: "1px solid rgba(232,93,4,0.2)", borderRadius: 16, padding: "20px" }}>
+                  <div style={{ fontSize: 11, color: "#e85d04", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Total Savings</div>
+                  <div style={{ fontSize: 36, color: "#e85d04", fontFamily: "'Bebas Neue'" }}>{compareData.savings_pct}%</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{compareData.tokens_saved.toLocaleString()} tokens prevented</div>
+                </div>
+              </div>
+
+              {/* VISUAL BAR GRAPH */}
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "24px" }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", marginBottom: 20 }}>Memory Footprint Comparison</div>
+                
+                {/* Buffer Bar */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 8 }}>
+                    <span style={{ color: "rgba(255,255,255,0.6)" }}>Standard Agent (100% Volume)</span>
+                    <span style={{ color: "#ef4444", fontFamily: "DM Mono" }}>{compareData.buffer_tokens.toLocaleString()}</span>
+                  </div>
+                  <div style={{ width: "100%", height: 8, background: "rgba(239,68,68,0.15)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ width: "100%", height: "100%", background: "#ef4444" }}></div>
+                  </div>
+                </div>
+
+                {/* Synapse Bar */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 8 }}>
+                    <span style={{ color: "#4ade80" }}>Synapse (Only {100 - compareData.savings_pct}% Volume)</span>
+                    <span style={{ color: "#4ade80", fontFamily: "DM Mono" }}>{compareData.synapse_tokens.toLocaleString()}</span>
+                  </div>
+                  <div style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.05)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ width: `${100 - compareData.savings_pct}%`, height: "100%", background: "#4ade80", transition: "width 1s cubic-bezier(0.16, 1, 0.3, 1)", boxShadow: "0 0 10px rgba(74,222,128,0.4)" }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }

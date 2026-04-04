@@ -17,6 +17,7 @@ import time
 import sys
 import json
 import requests
+import base64
 from groq import Groq
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -253,3 +254,22 @@ if __name__ == "__main__":
         if not task:
             task = "Extract invoices from Gmail, validate the data, and upload to Google Sheets"
         run_agent(task)
+
+
+
+def capture_ui_step(page, session_id, step_description):
+    # 1. Take the screenshot (JPEG is smaller than PNG)
+    screenshot_bytes = page.screenshot(type='jpeg', quality=40)
+    
+    # 2. Convert to Base64 string
+    b64_string = base64.b64encode(screenshot_bytes).decode('utf-8')
+    
+    # 3. Send to Synapse Backend
+    requests.post(f"{SYNAPSE_BASE}/visual/capture/{session_id}", json={
+        "step": step_description,
+        "image": b64_string
+    })
+
+# Usage example:
+# page.goto("https://google.com")
+# capture_ui_step(page, "agent-001", "Navigated to Google Search")
