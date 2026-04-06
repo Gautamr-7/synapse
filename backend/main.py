@@ -412,3 +412,21 @@ async def fetch_visual_steps(session_id: str):
     # Fetch and return the list
     steps = database.get_visual_steps(session_id)
     return {"steps": steps}
+
+
+@app.get("/dna/{task_type}")
+async def fetch_dna(task_type: str):
+    dna = database.get_agent_dna(task_type)
+    if dna:
+        return {"status": "success", "found": True, "dna": dna}
+    return {"status": "success", "found": False, "dna": None}
+
+@app.post("/dna/distill")
+async def distill_dna(data: dict):
+    task_type = data.get("task_type")
+    optimal_path = data.get("optimal_path")
+    if not task_type or not optimal_path:
+        return {"status": "error", "message": "Missing task_type or optimal_path"}
+    
+    database.distill_session_to_dna(task_type, optimal_path)
+    return {"status": "success", "message": "DNA successfully distilled and shared with the hive."}

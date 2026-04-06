@@ -2,6 +2,25 @@ import requests
 import base64
 
 class Synapse:
+
+    def get_dna(self, task_type: str):
+        """Check if previous agents have figured out this task."""
+        res = requests.get(f"{self.base_url}/dna/{task_type}")
+        if res.status_code == 200:
+            data = res.json()
+            if data.get("found"):
+                print(f"🧬 [Synapse DNA] Inherited knowledge for '{task_type}' from {data['dna']['success_count']} previous agents.")
+                return data['dna']['optimal_path']
+        print(f"🧬 [Synapse DNA] No previous playbook found for '{task_type}'. Agent starting from zero.")
+        return None
+
+    def distill_dna(self, task_type: str, optimal_path: str):
+        """Upload the successful workflow to the collective hive mind."""
+        payload = {"task_type": task_type, "optimal_path": optimal_path}
+        res = requests.post(f"{self.base_url}/dna/distill", json=payload)
+        if res.status_code == 200:
+            print(f"🌍 [Synapse DNA] Workflow successfully distilled! All future agents will inherit this path.")
+            
     def __init__(self, api_key: str, base_url: str = "https://synapse-backend-b5k1.onrender.com"):
         self.api_key = api_key
         self.base_url = base_url

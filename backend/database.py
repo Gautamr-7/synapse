@@ -423,3 +423,36 @@ def get_session_step_sequence(session_id: str) -> list:
     """Get the order of completed steps for a session — used for pattern learning."""
     steps = get_workflow_steps(session_id)
     return [s["step_name"] for s in steps if s["status"] == "completed"]
+
+# ─── Agent DNA (Collective Intelligence) ──────────────────────────────────────
+
+def get_agent_dna(task_type: str):
+    if USE_POSTGRES:
+        return pg_execute(
+            "SELECT optimal_path, success_count FROM agent_dna WHERE task_type = :task",
+            {"task": task_type}, fetch="one"
+        )
+    else:
+        conn = get_sqlite_conn()
+        row = conn.execute("SELECT optimal_path, success_count FROM agent_dna WHERE task_type = ?", (task_type,)).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+def distill_session_to_dna(task_type: str, optimal_path: str):
+    if USE_POSTGRES:
+        pg_execute("""
+            INSERT INTO agent_dna (task_type, optimal_path, success_count, last_updated)
+            VALUES (:task, :path, 1, NOW())
+            ON CONFLICT (task_type) 
+            DO UPDATE SET optimal_path = :path, success_count = agent_dna.success_count + 1, last_updated = NOW()
+        """, {"task": task_type, "path": optimal_path})
+    else:
+        conn = get_sqlite_conn()
+        # Fallback for SQLite schema (requires creating this table in _init_sqlite if you test locally)
+        conn.execute("""
+            INSERT INTO agent_dna (task_type, optimal_path, success_count)
+            VALUES (?, ?, 1)
+            ON CONFLICT(task_type) DO UPDATE SET optimal_path = ?, success_count = success_count + 1
+        """, (task_type, optimal_path, optimal_path))
+        conn.commit()
+        conn.close()
